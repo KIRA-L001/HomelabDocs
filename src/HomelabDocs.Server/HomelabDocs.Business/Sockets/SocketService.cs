@@ -72,57 +72,62 @@ public sealed class SocketService : ISocketService
             return SocketMutationResult.Invalid(validationError);
         }
 
+        var trimmedName = name.Trim();
+        var trimmedAddress = address.Trim();
+
+        var existing = await _socketRepository.GetByIdAsync(id, cancellationToken);
+        if (existing is null)
+        {
+            return SocketMutationResult.NotFound();
+        }
+
+        if (await _socketRepository.NameExistsAsync(trimmedName, excludeId: id, cancellationToken))
+        {
+            return SocketMutationResult.Conflict(
+                $"A socket named '{trimmedName}' already exists.");
+        }
+
+        existing.Name = trimmedName;
+        existing.Address = trimmedAddress;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _socketRepository.UpdateAsync(existing, cancellationToken);
+        return SocketMutationResult.Success(Map(existing));
+    }
+
+    public async Task<SocketMutationResult> DeleteAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
         var socket = await _socketRepository.GetByIdAsync(id, cancellationToken);
         if (socket is null)
         {
             return SocketMutationResult.NotFound();
         }
 
-        var trimmedName = name.Trim();
-        var trimmedAddress = address.Trim();
-
-        if (await _socketRepository.NameExistsAsync(trimmedName, id, cancellationToken))
-        {
-            return SocketMutationResult.Conflict(
-                $"A socket named '{trimmedName}' already exists.");
-        }
-
-        socket.Name = trimmedName;
-        socket.Address = trimmedAddress;
-        await _socketRepository.UpdateAsync(socket, cancellationToken);
-        return SocketMutationResult.Success(Map(socket));
-    }
-
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var socket = await _socketRepository.GetByIdAsync(id, cancellationToken);
-        if (socket is null)
-        {
-            return false;
-        }
-
-        await _socketRepository.DeleteAsync(socket, cancellationToken);
-        return true;
+        await _socketRepository.RemoveAsync(socket, cancellationToken);
+        return SocketMutationResult.Success();
     }
 
     private static string? Validate(string name, string address)
     {
         if (string.IsNullOrWhiteSpace(name))
-        {
             return "Name is required.";
-        }
-
-        return SocketAddressValidator.TryValidate(address, out var error)
-            ? null
-            : error;
+        if (string.IsNullOrWhiteSpace(address))
+            return "Address is required.";
+        return null;
     }
 
     private static SocketResponse Map(SocketEntity socket)
-        => new()
+    {
+        return new SocketResponse
         {
             Id = socket.Id,
             Name = socket.Name,
             Address = socket.Address,
-            CreatedAt = socket.CreatedAt
+            CreatedAt = socket.CreatedAt,
+            Version = socket.Version,
+            UpdateNotice = socket.UpdateNotice
         };
+    }
 }
