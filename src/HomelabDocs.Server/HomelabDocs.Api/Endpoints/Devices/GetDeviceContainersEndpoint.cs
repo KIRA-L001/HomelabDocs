@@ -1,11 +1,12 @@
 using FastEndpoints;
 using HomelabDocs.Business.Devices;
 using HomelabDocs.Shared.Containers;
+using System.Linq;
 
 namespace HomelabDocs.Api.Endpoints.Devices;
 
 public sealed class GetDeviceContainersEndpoint
-    : Endpoint<GetDeviceContainersRequest, GetRunningContainersResponse>
+    : Endpoint<GetDeviceContainersRequest, GetDeviceContainersResponse>
 {
     private readonly IDeviceQueryService _deviceQueryService;
 
@@ -31,11 +32,21 @@ public sealed class GetDeviceContainersEndpoint
             return;
         }
 
+        var running = containers.Where(c => c.Status == "Running").ToList();
+        var inProgress = containers.Where(c => c.Status == "InProgress").ToList();
+
         await Send.OkAsync(
-            new GetRunningContainersResponse
+            new GetDeviceContainersResponse
             {
-                Containers = containers
+                RunningContainers = running,
+                InProgressContainers = inProgress
             },
             ct);
     }
+}
+
+public class GetDeviceContainersResponse
+{
+    public IEnumerable<ContainerDto> RunningContainers { get; set; } = Enumerable.Empty<ContainerDto>();
+    public IEnumerable<ContainerDto> InProgressContainers { get; set; } = Enumerable.Empty<ContainerDto>();
 }
