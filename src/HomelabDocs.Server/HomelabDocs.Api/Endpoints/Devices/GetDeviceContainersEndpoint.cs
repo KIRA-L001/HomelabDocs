@@ -1,6 +1,7 @@
 using FastEndpoints;
 using HomelabDocs.Business.Devices;
 using HomelabDocs.Shared.Containers;
+using System.Linq;
 
 namespace HomelabDocs.Api.Endpoints.Devices;
 
@@ -31,10 +32,14 @@ public sealed class GetDeviceContainersEndpoint
             return;
         }
 
+        var filtered = containers
+            .Where(c => c.Status == ContainerStatus.Running || c.Status == ContainerStatus.InProgress)
+            .ToList();
+
         await Send.OkAsync(
             new GetRunningContainersResponse
             {
-                Containers = containers
+                Containers = filtered
             },
             ct);
     }
