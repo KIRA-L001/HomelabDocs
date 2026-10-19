@@ -31,10 +31,14 @@ public sealed class GetDeviceContainersEndpoint
             return;
         }
 
+        var filteredContainers = containers
+            .Where(c => c.Status == ContainerStatus.Running || c.Status == ContainerStatus.InProgress)
+            .ToList();
+
         await Send.OkAsync(
             new GetRunningContainersResponse
             {
-                Containers = containers
+                Containers = filteredContainers
             },
             ct);
     }
