@@ -15,6 +15,7 @@ public sealed class GetDeviceContainersEndpoint
     }
 
     public override void Configure()
+    pocos
     {
         Get("/api/devices/{Name}/containers");
         AllowAnonymous();
