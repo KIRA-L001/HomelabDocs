@@ -31,10 +31,18 @@ public sealed class GetDeviceContainersEndpoint
             return;
         }
 
+        // Add "in-progress" status to containers
+        var containersWithStatus = containers.Select(c => 
+        {
+            // If the container doesn't have a status, set it to "in-progress"
+            // If it already has a status, keep it as is
+            return c with { Status = string.IsNullOrEmpty(c.Status) ? "in-progress" : c.Status };
+        }).ToList();
+
         await Send.OkAsync(
             new GetRunningContainersResponse
             {
-                Containers = containers
+                Containers = containersWithStatus
             },
             ct);
     }
